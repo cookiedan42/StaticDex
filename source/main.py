@@ -52,34 +52,11 @@ def makeRoutes():
             table.table.append(Soup(f"{ ''.join(pokes) }</tr><br/>",features="html.parser"))
             soup.body.contents.append(table)
 
-    with open("../build/routes.html","w") as fp:
+    with open("../docs/routes.html","w") as fp:
         fp.write(soup.prettify())
 
 def makePokedex():
-    
-    sample = {
-		"base exp": "64",
-		"Pokemon": "Bulbasaur",
-		"DisplayName": "Bulbasaur",
-		"catch rate": 45,
-		"growth rate": "Medium Slow",
-		"hp": 45,
-		"attack": 49,
-		"defense": 49,
-		"sp atk": 65,
-		"sp def": 65,
-		"speed": 45,
-		"types": [
-			"Grass",
-			"Poison"
-		],
-		"index": 0,
-		"evolution": {
-			"level": "16",
-			"to": "Ivysaur"
-		}
-	}
-    
+
     pokeTables = {} # (index,evoIndex) : div
     for poke in pokedexLoc:
         # table for each should be same
@@ -103,14 +80,19 @@ def makePokedex():
     soup = defaultSoup()
     for key,value in sorted(pokeTables.items(),key=lambda x : x[0][0]):
         soup.body.contents.append(value)
-    with open("../build/pokedex.html","w") as fp:
+    with open("../docs/pokedex.html","w") as fp:
         fp.write(soup.prettify())
 
     soup = defaultSoup()
     for key,value in sorted(pokeTables.items(),key=lambda x : x[0][1]):
         soup.body.contents.append(value)
-    with open("../build/pokedexEvo.html","w") as fp:
+    with open("../docs/pokedexEvo.html","w") as fp:
         fp.write(soup.prettify())
+
+def makeIndex():
+    with open("../docs/index.html","w") as fp:
+        fp.write(defaultSoup().prettify())
 
 makeRoutes()
 makePokedex()
+makeIndex()
