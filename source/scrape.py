@@ -1,29 +1,33 @@
+from typing import Union,List
 import requests
 import re
 import json
 
 
-def scrapeRoutes(makeJson = True) -> dict:
+def scrapeRoutes(jsonPath = None) -> list:
     '''
     get routes, 
     ''' 
-    data = requests.get("https://pokeidle.net/routes.js")
-
-    t2 = data.text
+    t2 = requests.get("https://pokeidle.net/routes.js").text
     t2 = "{" + t2.split("{",1)[1]
+
+    # replace some strings that make json parsing difficult
     t2 = t2.replace("Let\\'s Go :","LETSGO") \
         .replace("\\'","_quote_") \
         .replace('Type: Null',"Type Null") \
         .replace("Legends : Origins","Legends  Origins")
 
+    # insert "" around keys
     p = re.compile('([a-zA-Z0-9_ ]*):', re.VERBOSE)
     rep1 = lambda match : f'"{match.group()[:-1].strip()}":'
     t2 = p.sub(rep1,t2)
 
+    # replace '' with "" around values
     p = re.compile("'([^']*)'", re.VERBOSE)
     rep2 = lambda match : f'"{match.group()[1:-1].strip()}"'
     t2 = p.sub(rep2,t2)
 
+    # undo the changes to data
     t2 = t2.replace("LETSGO","Let's Go :") \
         .replace("_quote_","'") \
         .replace("Type Null",'Type: Null') \
@@ -31,11 +35,41 @@ def scrapeRoutes(makeJson = True) -> dict:
 
     t2 = json.loads(t2)
 
-    if makeJson:
-        with open("./routes.json","w") as fp:
+    if jsonPath:
+        with open(jsonPath,"w") as fp:
             json.dump(t2,fp,indent="\t")
 
-    return t2
+    return loadRoutes(t2)
+
+class RouteEntry():
+    def __init__(self,region:str,route:dict) -> None:
+        self.region:str = region
+        self.name:str = route.get('name','')
+        self.uid:str = f"{region}{self.name.replace(' ','')}"
+        self.pokes:List[str] = route.get('pokes',[])
+        self.minLevel:int = route.get('minLevel',0)
+        self.maxLevel:int = route.get('maxLevel',0)
+        # self.unlocked = route.get('unlocked') # unused
+    
+def loadRoutes(routeJson: dict = None, routePath: str = None) -> List[RouteEntry]:
+    '''
+    take in the raw json of scrape, return object array of routes
+    default input is json dict
+    routePath kwarg treated as filePath
+    '''
+    if routeJson is None:
+        if routePath is None:
+            raise SyntaxError("invalid inputs")
+        with open(routePath,'r') as fp:
+            routeJson = json.load(fp)
+    
+    routeData = []
+    for region,v in routeJson.items():
+        for route in v.values():
+            routeData.append(RouteEntry(region,route))
+    return routeData
+
+
 
 def scrapePokedex(makeJson = True) -> dict:
     '''

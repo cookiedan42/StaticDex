@@ -1,10 +1,12 @@
 import scrape
 import json
+from typing import List
 from bs4 import BeautifulSoup as Soup
-routes = scrape.scrapeRoutes()
-pokedex = scrape.scrapePokedex()
-pokedexLoc = scrape.addLocToPokedex(routes,pokedex)
-damageTakenMulti = scrape.scrapeDamageTaken()
+
+
+# pokedex = scrape.scrapePokedex()
+# pokedexLoc = scrape.addLocToPokedex(routes,pokedex)
+# damageTakenMulti = scrape.scrapeDamageTaken()
 
 def defaultSoup():
 
@@ -29,30 +31,33 @@ def defaultSoup():
     <body></body>
     </html>""",features="html.parser")
 
-def makeRoutes():
+def makeRow(data:List[str]) -> Soup:
+    '''
+    make a bs4 tablerow object from a series of strings
+    '''
+    return Soup(f"{ ''.join(data) }</tr>",features="html.parser")
+
+def makeRoutes(routes:List[scrape.RouteEntry],target:str):
     # consider adding pokestats onto routes also
 
     soup = defaultSoup()
-    for region,v in routes.items():
-        for route in v.values():
-            table = Soup(f"<div id={region}{route['name'].replace(' ','')}><table></table></div>",features="html.parser")
+    for route in routes:
+        div = Soup(f"<div id={route.uid}><table></table><br/></div>",features="html.parser")
 
-            keys = ["region","name","minLevel","maxLevel"]
-            values = [region,route["name"],route["minLevel"],route["maxLevel"]]
+        keys = ["region","name","minLevel","maxLevel"]
+        values = [route.region,route.name,route.minLevel,route.maxLevel]
 
-            keyCells = [f"<th>{i}</th>" for i in keys]
-            keyRow = Soup(f"<tr>{''.join(keyCells)}</tr>",features="html.parser")
-            valCells = [f"<td>{i}</td>" for i in values]
-            valRow = Soup(f"<tr>{''.join(valCells)}</tr>",features="html.parser")
-            pokes = ["<tr><th>Pokes : </th>"] + [f"<td><a href=\"./pokedex.html#{i}\">{i}</a></td>" for i in route["pokes"]]
-            
-            table.table.append(keyRow)
-            table.table.append(valRow)
-            
-            table.table.append(Soup(f"{ ''.join(pokes) }</tr><br/>",features="html.parser"))
-            soup.body.contents.append(table)
+        keyCells = [f"<th>{i}</th>" for i in keys]
+        valCells = [f"<td>{i}</td>" for i in values]
+        pokes = ["<tr><th>Pokes : </th>"] + [f"<td><a href=\"./pokedex.html#{i}\">{i}</a></td>" for i in route.pokes]
+        
+        div.table.append(makeRow(keyCells))
+        div.table.append(makeRow(valCells))
+        div.table.append(makeRow(pokes))
 
-    with open("../docs/routes.html","w") as fp:
+        soup.body.contents.append(div)
+
+    with open(target,"w") as fp:
         fp.write(soup.prettify())
 
 def makePokedex():
@@ -93,6 +98,11 @@ def makeIndex():
     with open("../docs/index.html","w") as fp:
         fp.write(defaultSoup().prettify())
 
-makeRoutes()
-makePokedex()
-makeIndex()
+# routes = scrape.scrapeRoutes("./routes.json")
+routes = scrape.loadRoutes(routePath = './routes.json')
+makeRoutes(routes,"../docs/routes.html")
+
+pokedex = scrape.scrapePokedex()
+pokedex = scrape.loadPokedex()
+# makePokedex()
+# makeIndex()
