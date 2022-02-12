@@ -1,10 +1,8 @@
 import scrape
-import json
-from typing import List
+import math
+from typing import List, Dict
 from bs4 import BeautifulSoup as Soup
 
-
-# pokedex = scrape.scrapePokedex()
 # pokedexLoc = scrape.addLocToPokedex(routes,pokedex)
 # damageTakenMulti = scrape.scrapeDamageTaken()
 
@@ -35,13 +33,13 @@ def makeRow(data:List[str]) -> Soup:
     '''
     make a bs4 tablerow object from a series of strings
     '''
-    return Soup(f"{ ''.join(data) }</tr>",features="html.parser")
+    return Soup(f"<tr>{ ''.join(data) }</tr>",features="html.parser")
 
-def makeRoutes(routes:List[scrape.RouteEntry],target:str):
+def makeRoutes(routes:Dict[str,scrape.RouteEntry],target:str):
     # consider adding pokestats onto routes also
 
     soup = defaultSoup()
-    for route in routes:
+    for route in sorted(routes.values(), key = lambda route : route.index):
         div = Soup(f"<div id={route.uid}><table></table><br/></div>",features="html.parser")
 
         keys = ["region","name","minLevel","maxLevel"]
@@ -49,7 +47,7 @@ def makeRoutes(routes:List[scrape.RouteEntry],target:str):
 
         keyCells = [f"<th>{i}</th>" for i in keys]
         valCells = [f"<td>{i}</td>" for i in values]
-        pokes = ["<tr><th>Pokes : </th>"] + [f"<td><a href=\"./pokedex.html#{i}\">{i}</a></td>" for i in route.pokes]
+        pokes = ["<th>Pokes : </th>"] + [f"<td><a href=\"./pokedex.html#{i}\">{i}</a></td>" for i in route.pokes]
         
         div.table.append(makeRow(keyCells))
         div.table.append(makeRow(valCells))
@@ -60,27 +58,61 @@ def makeRoutes(routes:List[scrape.RouteEntry],target:str):
     with open(target,"w") as fp:
         fp.write(soup.prettify())
 
-def makePokedex():
+def makePokedex(pokedex:Dict[str, scrape.PokedexEntry],routes:Dict[str, scrape.RouteEntry]):
 
     pokeTables = {} # (index,evoIndex) : div
-    for poke in pokedexLoc:
+    for poke in pokedex.values():
         # table for each should be same
-        table = Soup(f"<div id={poke['Pokemon'].replace(' ','')}><table></table></div>",features="html.parser")
+        div = Soup(f"<div id={poke.name.replace(' ','')}><table></table></div>",features="html.parser")
         
-        keys = ["DisplayName","Pokemon","types","evolution"]
-        values = [poke["DisplayName"], poke["Pokemon"], "-".join(poke["types"]), poke["evolution"].get("to","")]
+        keys = ["DisplayName","type","evolution"]
+        keys = [f"<th>{i}</th>" for i in keys]
+        values = [f"<a href=\"#{poke.displayName}\">{poke.displayName}</a>",
+            "-".join(poke.types), f"<a href=\"#{poke.evolution.to}\">{poke.evolution.to}</a>"]
+        values = [f"<td>{i}</td>" for i in values]
+        locationHead = ["<th>Routes</th>","<th>min level</th>","<th>max level</th>","<th>min exp</th>","<th>max exp</th>"]
+        locations = [[f"<a href=\"./routes.html#{i}\">{i}</a>", 
+            routes[i].minLevel, routes[i].maxLevel,
+            poke.expVal(routes[i].minLevel), poke.expVal(routes[i].maxLevel)
+            ] for i in poke.locations]
+        locations = [[f"<td>{j}</td>" for j in i] for i in locations]
+        statKeys = ['stat','hp','attack','defence','speed']
+        statKeys = [f"<th>{i}</th>" for i in statKeys]
+        stat100 = ['lv100',poke.stats100.hp, poke.stats100.avgAtk,poke.stats100.avgDef, poke.atkTime]
+        stat100 = [f"<td>{i}</td>" for i in stat100]
+        rank100 = ['rank',poke.statsRank.hp, poke.statsRank.avgAtk,poke.statsRank.avgDef, poke.statsRank.speed]
+        rank100 = [f"<td>{i}</td>" for i in rank100]
+        div.table.append(makeRow(keys))
+        div.table.append(makeRow(values))
+        div.table.append(makeRow(statKeys))
+        div.table.append(makeRow(stat100))
+        div.table.append(makeRow(rank100))
 
-        keyCells = [f"<th>{i}</th>" for i in keys]
-        keyRow = Soup(f"<tr>{''.join(keyCells)}</tr>",features="html.parser")
-        valCells = [f"<td>{i}</td>" for i in values]
-        valRow = Soup(f"<tr>{''.join(valCells)}</tr>",features="html.parser")
-        locs = ["<tr><th>Routes : </th>"] + [f"<td><a href=\"./routes.html#{i}\">{i}<a></td>" for i in poke["locations"]]
+        # forms
+        forms = [poke.name]
+        checker = [poke.name]
+        while len(checker) > 0:
+            searchName = checker.pop(0)
+            for nextName in pokedex[searchName].prevolution + [pokedex[searchName].evolution.to]:
+                if nextName not in forms and nextName !='':
+                    forms.append(nextName)
+                    checker.append(nextName)
+            
+        # search for all pre/post evo then sort by evo order
+        forms = [pokedex[poke] for poke in forms]
+        forms = sorted(forms,key=lambda poke : poke.index.evoIndex)
+        forms = [f"<td><a href=\"#{poke.displayName}\">{poke.displayName}</a></td>" for poke in forms]
+        div.table.append(makeRow(["<th>Forms</th>"]))
+        div.table.append(makeRow(forms))
 
-        table.table.append(keyRow)
-        table.table.append(valRow)
-        table.table.append(Soup(f"{ ''.join(locs) }</tr><br/>",features="html.parser"))
+        # locations
+        div.table.append(makeRow(locationHead))
+        for i in locations:
+            div.table.append(makeRow(i))
+        
+        div.table.append(div.new_tag('br'))
 
-        pokeTables[(poke['index'],poke['evoIndex'])] = table
+        pokeTables[(poke.index.index,poke.index.evoIndex)] = div
     
     soup = defaultSoup()
     for key,value in sorted(pokeTables.items(),key=lambda x : x[0][0]):
@@ -99,10 +131,13 @@ def makeIndex():
         fp.write(defaultSoup().prettify())
 
 # routes = scrape.scrapeRoutes("./routes.json")
-routes = scrape.loadRoutes(routePath = './routes.json')
-makeRoutes(routes,"../docs/routes.html")
+routes = scrape.loadRoutes(path = './routes.json')
 
-pokedex = scrape.scrapePokedex()
-pokedex = scrape.loadPokedex()
-# makePokedex()
-# makeIndex()
+# pokedex = scrape.scrapePokedex("./pokedex.json")
+pokedex = scrape.loadPokedex(path = "./pokedex.json")
+
+pokedex = scrape.addLocToPokedex(routes,pokedex)
+
+makeIndex()
+makeRoutes(routes,"../docs/routes.html")
+makePokedex(pokedex,routes)
