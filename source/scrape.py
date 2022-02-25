@@ -87,15 +87,15 @@ class PokedexEntry():
     StatsContainer = namedtuple('StatsContainer',['hp', 'attack', 'defense', 'spAtk', 'spDef', 'speed', 'exp','avgAtk','avgDef'])
     
     def __init__(self,poke) -> None:
-        self.name = poke['Pokemon']
+        self.name = poke['Pokemon'].replace(' ','-')
         self.displayName = poke['DisplayName']
         self.locations = []
         self.index = self.IndexContainer(poke['index'], poke['evoIndex'])
         if poke['evolution'] == {}:
             self.evolution = self.EvoContainer(0, '')
         else:
-            self.evolution = self.EvoContainer(int(poke['evolution']['level']), poke['evolution']['to'])
-        self.prevolution = poke['prevolution']
+            self.evolution = self.EvoContainer(int(poke['evolution']['level']), poke['evolution']['to'].replace(" ","-"))
+        self.prevolution = [i.replace(" ","-") for i in poke['prevolution']]
         self.image = self.PokeImageContainer(
             self.ImageContainer(poke['images']['normal']['front'], poke['images']['normal']['back']),
             self.ImageContainer(poke['images']['shiny']['front'], poke['images']['shiny']['back'])

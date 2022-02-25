@@ -7,8 +7,7 @@ from bs4 import BeautifulSoup as Soup
 # damageTakenMulti = scrape.scrapeDamageTaken()
 
 def defaultSoup():
-
-    return Soup("""<html>
+    soup = Soup("""<html>
     <head>
     <style>
     table {
@@ -28,6 +27,19 @@ def defaultSoup():
     </head>
     <body></body>
     </html>""",features="html.parser")
+
+
+    links = [
+        "<a href=\"./pokedex.html\">pokedex</a>",
+        "<a href=\"./pokedexEvo.html\">pokedex in Evolution order</a>",
+        "<a href=\"./routes.html\">routes</a>",]
+    links = [i+"<br>" for i in links]
+    links = [Soup(i,features="html.parser") for i in links]
+    for i in links:
+        soup.body.contents.append(i)
+
+
+    return soup
 
 def makeRow(data:List[str]) -> Soup:
     '''
@@ -67,7 +79,7 @@ def makePokedex(pokedex:Dict[str, scrape.PokedexEntry],routes:Dict[str, scrape.R
         
         keys = ["DisplayName","type","evolution"]
         keys = [f"<th>{i}</th>" for i in keys]
-        values = [f"<a href=\"#{poke.displayName}\">{poke.displayName}</a>",
+        values = [f"<a href=\"#{poke.name}\">{poke.displayName}</a>",
             "-".join(poke.types), f"<a href=\"#{poke.evolution.to}\">{poke.evolution.to}</a>"]
         values = [f"<td>{i}</td>" for i in values]
         locationHead = ["<th>Routes</th>","<th>min level</th>","<th>max level</th>","<th>min exp</th>","<th>max exp</th>"]
@@ -101,7 +113,7 @@ def makePokedex(pokedex:Dict[str, scrape.PokedexEntry],routes:Dict[str, scrape.R
         # search for all pre/post evo then sort by evo order
         forms = [pokedex[poke] for poke in forms]
         forms = sorted(forms,key=lambda poke : poke.index.evoIndex)
-        forms = [f"<td><a href=\"#{poke.displayName}\">{poke.displayName}</a></td>" for poke in forms]
+        forms = [f"<td><a href=\"#{poke.name}\">{poke.displayName}</a></td>" for poke in forms]
         div.table.append(makeRow(["<th>Forms</th>"]))
         div.table.append(makeRow(forms))
 
