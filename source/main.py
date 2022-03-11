@@ -112,5 +112,23 @@ def makePokedex():
     with open("../build/pokedexEvo.html","w") as fp:
         fp.write(soup.prettify())
 
+
 makeRoutes()
 makePokedex()
+
+def makeIndex():
+    with open("../docs/index.html","w") as fp:
+        fp.write(defaultSoup().prettify())
+
+routes = scrape.scrapeRoutes("./routes.json")
+routes = scrape.loadRoutes(path = './routes.json')
+
+pokedex = scrape.scrapePokedex("./pokedex.json")
+pokedex = scrape.loadPokedex(path = "./pokedex.json")
+
+pokedex = scrape.addLocToPokedex(routes,pokedex)
+
+makeIndex()
+makeRoutes(routes,"../docs/routes.html")
+makePokedex(pokedex,routes)
+
