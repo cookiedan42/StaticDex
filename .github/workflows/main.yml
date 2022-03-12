@@ -1,0 +1,46 @@
+name: build_site
+
+# Controls when the workflow will run
+on:
+  schedule:
+    - cron: 0 12 * * *
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+         ref: build
+
+
+      - name: setup git config
+        run: |
+          # setup the username and email. I tend to use 'GitHub Actions Bot' with no email by default
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+        
+      - name: setup python env
+        run: |
+          python3 -m pip install beautifulsoup4
+          
+      - name: write
+        run: |
+          cd ./source
+          python3 ./main.py
+          cd ..
+          
+      - name: commit
+        run: |
+          # Stage the file, commit and push
+          git add *
+          git commit -m "new build"
+          git push origin build

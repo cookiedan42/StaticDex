@@ -2,9 +2,7 @@ import scrape
 import math
 from typing import List, Dict
 from bs4 import BeautifulSoup as Soup
-
-# pokedexLoc = scrape.addLocToPokedex(routes,pokedex)
-# damageTakenMulti = scrape.scrapeDamageTaken()
+import datetime
 
 def defaultSoup():
     soup = Soup("""<html>
@@ -30,6 +28,7 @@ def defaultSoup():
 
 
     links = [
+        f"<div>last updated: {datetime.datetime.now()}<div>",
         "<a href=\"./pokedex.html\">pokedex</a>",
         "<a href=\"./pokedexEvo.html\">pokedex in Evolution order</a>",
         "<a href=\"./routes.html\">routes</a>",]
